@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Design Generator</title>
+    <style>
+        /* Styling for the tables */
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        /* Styling for the header row */
+        th {
+            background-color: purple;
+            color: white;
+        }
+
+        /* Styling for the titles of the tables */
+        h3 {
+            color: purple;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Design Generator</h1>
+
+<!-- Input for Temp Design Name -->
+<label for="TempDesignName">Enter a Temp Design Name:</label>
+<input type="text" id="TempDesignName" placeholder="Temp Design Name"><br><br>
+<!-- Input for Version -->
+<label for="Version">Enter the current Version :</label>
+<input type="text" id="Version" placeholder="Version"><br><br>
+
+<label for="Description">Enter a Description:</label>
+<input type="text" id="Description" placeholder="Enter a Description for the Design"><br><br>
+
+
+<label for="csvFile1">Add CVS File for Data 1:</label>
+<input type="file" id="csvFile1" accept=".csv"><br><br>
+
+<label for="csvFile2">Add CVS File for Data 2:</label>
+<input type="file" id="csvFile2" accept=".csv"><br><br>
+
+<!-- Button to generate the Word document -->
+<button onclick="generateWord()">Generate Word Document</button>
+
+<script>
+    // Function to parse CSV data
+    function parseCSV(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split("\n");
+                // Remove empty rows and trim extra spaces from each cell
+                const data = rows
+                    .map(row => row.split(",").map(cell => cell.trim() || ""))
+                    .filter(row => row.some(cell => cell));  // Filter out empty rows
+                resolve(data);
+            };
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+    }
+
+    // Function to generate the Word document
+    async function generateWord() {
+        const file1 = document.getElementById('csvFile1').files[0];
+        const file2 = document.getElementById('csvFile2').files[0];
+        const TempDesignName = document.getElementById('TempDesignName').value.trim();
+		let Version = document.getElementById('Version').value.trim();
+		let Description = document.getElementById('Description').value.trim();
+		
+		
+        if (!file1 || !file2) {
+            alert("Please select both CSV files.");
+            return;
+        }
+
+        if (!TempDesignName) {
+            alert("Please enter a Temp Design Name.");
+            return;
+        }
+		 
+		if (!Version) {
+			Version = "0";  // Set the value to 0 if it's not entered.
+		}
+		if (!Description) {
+			Description = "";  // Set the value to "" if nothing is provided.
+		}
+
+        // Parse both CSVs
+        const data1 = await parseCSV(file1);
+        const data2 = await parseCSV(file2);
+
+        // Create the Word document content
+        let docContent = `
+            <html xmlns:w="urn:schemas-microsoft-com:office:word">
+                <head>
+                    <style>
+                        table, th, td { border: 1px solid black; border-collapse: collapse; }
+                        th, td { padding: 8px; text-align: left; }
+                        th { background-color: purple; color: white; } /* Header row style */
+                        h3 { color: purple; } /* Table title style */
+                    </style>
+                </head>
+                <body>
+                    <h2 style="color: MidnightBlue;">Temp Design Name: ${TempDesignName}</h2>
+                    <p></p>
+
+                    <!-- New Table Before the Data Tables -->
+                    <table>
+                        <tr><td>Version: ${Version}</td></tr>
+                        <tr><td>Description: ${Description}</td></tr>
+                    </table>
+
+                    <h3>Design Data 1:</h3>
+                    <table>`;
+
+        // Add Table 1 data (without column headers)
+        data1.forEach((row, index) => {
+            docContent += "<tr>";
+            row.forEach(cell => {
+                // For the first row (index 0), apply the purple background
+                if (index === 0) {
+                    docContent += `<th>${cell}</th>`; // Header style for the first row
+                } else {
+                    docContent += `<td>${cell}</td>`;
+                }
+            });
+            docContent += "</tr>";
+        });
+
+        docContent += `
+                    </table>
+
+                    <h3>Design Data 2:</h3>
+                    <table>`;
+
+        // Add Table 2 data (without column headers)
+        data2.forEach((row, index) => {
+            docContent += "<tr>";
+            row.forEach(cell => {
+                // For the first row (index 0), apply the purple background
+                if (index === 0) {
+                    docContent += `<th>${cell}</th>`; // Header style for the first row
+                } else {
+                    docContent += `<td>${cell}</td>`;
+                }
+            });
+            docContent += "</tr>";
+        });
+
+        docContent += `
+                    </table>
+
+                    <p>Last Update: ${new Date().toLocaleDateString('en-GB')}</p>
+                </body>
+            </html>`;
+
+        // Use Blob to create a downloadable Word file
+        const blob = new Blob([docContent], { type: 'application/msword' });
+
+        // Create a download link and simulate click to download
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${TempDesignName}.doc`; // Use workflow name in the filename
+        link.click();
+    }
+</script>
+
+</body>
+</html>
